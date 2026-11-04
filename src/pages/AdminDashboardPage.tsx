@@ -35,6 +35,8 @@ export const AdminDashboardPage: React.FC = () => {
   const [deletingGalleryImage, setDeletingGalleryImage] = useState<string | null>(null);
   const [uploadingEventPhoto, setUploadingEventPhoto] = useState<string | null>(null);
   const [eventPhotoError, setEventPhotoError] = useState('');
+  const [savingEventLocation, setSavingEventLocation] = useState<string | null>(null);
+  const [eventLocationError, setEventLocationError] = useState('');
 
   const fetchDashboardData = async () => {
     try {
@@ -295,6 +297,36 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
 
+  const updateEventLocation = (eventId: string, field: 'venue_name' | 'address' | 'google_maps_url', value: string) => {
+    setEvents((currentEvents) => currentEvents.map((event) => (
+      event.id === eventId ? { ...event, [field]: value } : event
+    )));
+  };
+
+  const saveEventLocation = async (event: WeddingEvent) => {
+    setSavingEventLocation(event.id);
+    setEventLocationError('');
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .update({
+          venue_name: event.venue_name,
+          address: event.address,
+          google_maps_url: event.google_maps_url,
+        })
+        .eq('id', event.id)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      setEvents((currentEvents) => currentEvents.map((current) => current.id === data.id ? data : current));
+    } catch (error) {
+      setEventLocationError(`Could not save the event location: ${getSupabaseErrorMessage(error)}`);
+    } finally {
+      setSavingEventLocation(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-royalty-deepMaroon text-royalty-warmBeige flex flex-col md:flex-row">
       <aside className="w-full md:w-64 bg-royalty-burgundy/80 border-r border-royalty-gold/30 p-6 flex flex-col justify-between">
@@ -409,40 +441,73 @@ export const AdminDashboardPage: React.FC = () => {
                         </div>
                       </div>
                       {evt ? (
-                        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                          {(details.index === 3
-                            ? [
-                                { field: 'image_url' as const, label: 'Mandwa Photo' },
-                                { field: 'secondary_image_url' as const, label: 'Binoli Photo' },
-                              ]
-                            : [{ field: 'image_url' as const, label: 'Event Photo' }]
-                          ).map(({ field, label }) => {
-                            const uploadKey = `${evt.id}-${field}`;
-                            const currentImage = evt[field];
-                            return (
-                              <div key={field} className="rounded-xl border border-royalty-gold/20 bg-royalty-deepMaroon/40 p-4">
-                                <p className="mb-2 text-xs font-semibold text-royalty-champagne">{label}</p>
-                                {currentImage && (
-                                  <img src={currentImage} alt={`${label} preview`} className="mb-3 h-32 w-full rounded-lg object-cover" />
-                                )}
-                                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-royalty-gold/40 px-4 py-2 text-xs font-semibold text-royalty-gold transition-colors hover:bg-royalty-gold hover:text-royalty-deepMaroon">
-                                  <Upload className="h-4 w-4" />
-                                  <span>{uploadingEventPhoto === uploadKey ? 'Uploading…' : currentImage ? `Replace ${label}` : `Upload ${label}`}</span>
+                        <div className="mt-5 space-y-5">
+                          <div className="rounded-xl border border-royalty-gold/20 bg-royalty-deepMaroon/40 p-4">
+                            <h4 className="mb-3 text-sm font-semibold text-royalty-champagne">Event location</h4>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              {([
+                                { field: 'venue_name', label: 'Venue name' },
+                                { field: 'address', label: 'Address' },
+                                { field: 'google_maps_url', label: 'Google Maps link' },
+                              ] as const).map(({ field, label }) => (
+                                <label key={field} className="block text-xs text-royalty-warmBeige/70">
+                                  <span className="mb-1 block">{label}</span>
                                   <input
-                                    type="file"
-                                    accept="image/*"
-                                    disabled={uploadingEventPhoto !== null}
-                                    className="sr-only"
-                                    onChange={(inputEvent) => {
-                                      const file = inputEvent.currentTarget.files?.[0];
-                                      inputEvent.currentTarget.value = '';
-                                      if (file) void uploadEventPhoto(evt, file, field);
-                                    }}
+                                    type="text"
+                                    value={evt[field] || ''}
+                                    onChange={(inputEvent) => updateEventLocation(evt.id, field, inputEvent.currentTarget.value)}
+                                    placeholder={field === 'google_maps_url' ? 'https://maps.google.com/…' : `Enter ${label.toLowerCase()}`}
+                                    className="w-full rounded-lg border border-royalty-gold/30 bg-royalty-deepMaroon px-3 py-2 text-sm text-royalty-champagne placeholder:text-royalty-warmBeige/35 focus:border-royalty-gold focus:outline-none"
                                   />
                                 </label>
-                              </div>
-                            );
-                          })}
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => void saveEventLocation(evt)}
+                              disabled={savingEventLocation !== null}
+                              className="mt-3 rounded-lg bg-royalty-gold px-4 py-2 text-xs font-semibold text-royalty-deepMaroon transition-colors hover:bg-royalty-champagne disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {savingEventLocation === evt.id ? 'Saving location…' : 'Save location'}
+                            </button>
+                            {eventLocationError && <p role="alert" className="mt-3 text-sm text-red-300">{eventLocationError}</p>}
+                          </div>
+
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            {(details.index === 3
+                              ? [
+                                  { field: 'image_url' as const, label: 'Mandwa Photo' },
+                                  { field: 'secondary_image_url' as const, label: 'Binoli Photo' },
+                                ]
+                              : [{ field: 'image_url' as const, label: 'Event Photo' }]
+                            ).map(({ field, label }) => {
+                              const uploadKey = `${evt.id}-${field}`;
+                              const currentImage = evt[field];
+                              return (
+                                <div key={field} className="rounded-xl border border-royalty-gold/20 bg-royalty-deepMaroon/40 p-4">
+                                  <p className="mb-2 text-xs font-semibold text-royalty-champagne">{label}</p>
+                                  {currentImage && (
+                                    <img src={currentImage} alt={`${label} preview`} className="mb-3 h-32 w-full rounded-lg object-cover" />
+                                  )}
+                                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-royalty-gold/40 px-4 py-2 text-xs font-semibold text-royalty-gold transition-colors hover:bg-royalty-gold hover:text-royalty-deepMaroon">
+                                    <Upload className="h-4 w-4" />
+                                    <span>{uploadingEventPhoto === uploadKey ? 'Uploading…' : currentImage ? `Replace ${label}` : `Upload ${label}`}</span>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      disabled={uploadingEventPhoto !== null}
+                                      className="sr-only"
+                                      onChange={(inputEvent) => {
+                                        const file = inputEvent.currentTarget.files?.[0];
+                                        inputEvent.currentTarget.value = '';
+                                        if (file) void uploadEventPhoto(evt, file, field);
+                                      }}
+                                    />
+                                  </label>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       ) : (
                         <p className="mt-5 text-xs text-amber-200">

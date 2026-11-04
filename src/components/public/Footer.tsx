@@ -32,7 +32,7 @@ export const Footer: React.FC<Props> = ({ groomName, brideName, weddingDateDispl
           <ArrowUp className="w-5 h-5" />
         </button>
 
-        <div className="text-[11px] text-royalty-warmBeige/40 font-sans flex items-center justify-center gap-1">
+        <div className="text-sm text-royalty-warmBeige/60 font-sans flex items-center justify-center gap-1">
           <span>Crafted with</span>
           <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 inline" />
           <span>by Girish Joshi</span>

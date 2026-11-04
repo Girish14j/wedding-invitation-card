@@ -6,7 +6,7 @@ export const AudioFloatingPlayer: React.FC = () => {
   const { isPlaying, isMuted, volume, togglePlay, toggleMute, setVolume } = useWeddingAudio();
 
   return (
-    <div className="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-3 py-2 rounded-full bg-royalty-deepMaroon/90 border border-royalty-gold/50 shadow-[0_4px_20px_rgba(0,0,0,0.6)] backdrop-blur-md">
+    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-center gap-2 px-3 py-2 rounded-full bg-royalty-deepMaroon/90 border border-royalty-gold/50 shadow-[0_4px_20px_rgba(0,0,0,0.6)] backdrop-blur-md">
       <button
         onClick={togglePlay}
         title={isPlaying ? 'Pause Instrumental' : 'Play Instrumental'}
@@ -30,11 +30,12 @@ export const AudioFloatingPlayer: React.FC = () => {
         step="0.05"
         value={isMuted ? 0 : volume}
         onChange={(e) => setVolume(parseFloat(e.target.value))}
-        className="w-16 accent-royalty-gold cursor-pointer hidden sm:block"
+        className="h-16 w-4 accent-royalty-gold cursor-pointer"
+        style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
         title="Volume"
       />
 
-      <Music className="w-3.5 h-3.5 text-royalty-gold/70 animate-pulse ml-1" />
+      <Music className="w-3.5 h-3.5 text-royalty-gold/70 animate-pulse mt-1" />
     </div>
   );
 };
